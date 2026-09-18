@@ -2,6 +2,8 @@
 
 [![Téléchargements](https://img.shields.io/github/downloads/zenmod40/coolplay/total.svg)](https://github.com/zenmod40/coolplay/releases) [![Version](https://img.shields.io/github/v/release/zenmod40/coolplay)](https://github.com/zenmod40/coolplay/releases/latest)
 
+> **[Page du module sur zm40.com](https://zm40.com/coolplay)** · [Documentation](https://zm40.com/coolplay/documentation) · [Changelog](https://zm40.com/coolplay/changelog)
+
 Module PrestaShop de vidéos produits sans impact sur la vitesse. Les vidéos (YouTube ou fichier hébergé) s'affichent en vignettes dans la galerie de la fiche produit avec une façade click-to-load : rien n'est chargé avant le clic, ni iframe, ni script tiers, ni cookie.
 
 Compatible PrestaShop 1.7, 8 et 9. Module libre et open source sous licence OSL 3.0, par ZM40.
@@ -48,7 +50,7 @@ En complément, le module injecte des données structurées VideoObject (JSON-LD
 
 ## Support et services
 
-Le code est offert. Le support gratuit se limite aux bugs reproductibles (issues GitHub). L'installation, la configuration, l'adaptation à votre thème, le débogage spécifique et les développements sur-mesure sont des prestations : zm40.com.
+Le code est offert. Le support gratuit se limite aux bugs reproductibles (issues GitHub). L'installation, la configuration, l'adaptation à votre thème, le débogage spécifique et les développements sur-mesure sont des prestations : [zm40.com](https://zm40.com).
 
 Une version compatible ThirtyBees / PrestaShop 1.6 peut être étudiée sur demande.
 
