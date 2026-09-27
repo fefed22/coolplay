@@ -1,6 +1,7 @@
 # CoolPlay - Vidéos produits
 
-[![Téléchargements](https://img.shields.io/github/downloads/zenmod40/coolplay/total.svg)](https://github.com/zenmod40/coolplay/releases) [![Version](https://img.shields.io/github/v/release/zenmod40/coolplay)](https://github.com/zenmod40/coolplay/releases/latest)
+![PrestaShop 1.7 → 9](https://img.shields.io/badge/PrestaShop-1.7%20%E2%86%92%209-blue) [![Téléchargements](https://img.shields.io/github/downloads/zenmod40/coolplay/total.svg)](https://github.com/zenmod40/coolplay/releases) [![Version](https://img.shields.io/github/v/release/zenmod40/coolplay)](https://github.com/zenmod40/coolplay/releases/latest)
+![License: OSL 3.0](https://img.shields.io/badge/License-OSL--3.0-blue)
 
 > **[Page du module sur zm40.com](https://zm40.com/coolplay)** · [Documentation](https://zm40.com/coolplay/documentation) · [Changelog](https://zm40.com/coolplay/changelog)
 
