@@ -4,6 +4,19 @@ Toutes les modifications notables de ce module sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et le module suit le [Versionnement sémantique](https://semver.org/lang/fr/).
 
+## [1.1.0] - 2026-09-27
+
+### Ajouté
+
+- **Vidéos gérables hors back-office.** Lister, ajouter (YouTube ou fichier), renommer par langue, activer, réordonner et supprimer passent par une classe publique, `CoolPlayApi`, utilisée par l'onglet de la fiche produit comme par l'application de gestion Régie. Un fichier peut être ajouté depuis le disque du serveur, sans passer par un envoi de formulaire. Rien ne change sur la fiche produit : même rendu, même lecteur, mêmes données structurées.
+
+### Corrigé
+
+- **Les fichiers vidéo n'étaient contrôlés que par leur extension.** Un fichier quelconque renommé en `.mp4` était accepté. La signature réelle du fichier est maintenant vérifiée (MP4 ou WebM), l'image d'aperçu doit être une vraie image JPG, PNG ou WebP, et la taille est plafonnée : 100 Mo pour une vidéo, 5 Mo pour un aperçu.
+- **Supprimer un produit dans une boutique effaçait ses vidéos dans toutes les boutiques.** En multiboutique, seules les vidéos des boutiques concernées par la suppression sont retirées.
+- **Les actions de l'onglet vidéo ne vérifiaient pas le produit.** Une vidéo d'un autre produit ou d'une autre boutique pouvait être modifiée ou supprimée en changeant son identifiant dans la requête. Elle est désormais refusée.
+- Monter ou descendre une vidéo renumérote les positions sans trou.
+
 ## [1.0.4] - 2026-09-04
 
 ### Ajouté

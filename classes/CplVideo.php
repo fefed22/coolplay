@@ -89,36 +89,20 @@ class CplVideo extends ObjectModel
     }
 
     /**
-     * Monte ou descend la vidéo d'un cran (échange de positions avec la voisine).
+     * Supprime les vidéos d'un produit dans les boutiques données uniquement
+     * (un produit retiré d'une boutique garde ses vidéos dans les autres).
+     *
+     * @param int|int[] $idShops
      */
-    public static function move($id, $up)
+    public static function deleteByProduct($idProduct, $idShops)
     {
-        $video = new self((int) $id);
-        if (!Validate::isLoadedObject($video)) {
-            return false;
+        $idShops = array_filter(array_map('intval', (array) $idShops));
+        if (!$idShops) {
+            return true;
         }
-        $op = $up ? '<' : '>';
-        $order = $up ? 'DESC' : 'ASC';
-        $neighbor = Db::getInstance()->getRow(
-            'SELECT id_cpl_video, position FROM `' . _DB_PREFIX_ . 'cpl_video`
-             WHERE id_product = ' . (int) $video->id_product . ' AND id_shop = ' . (int) $video->id_shop . '
-               AND (position ' . $op . ' ' . (int) $video->position . '
-                    OR (position = ' . (int) $video->position . ' AND id_cpl_video ' . $op . ' ' . (int) $video->id . '))
-             ORDER BY position ' . $order . ', id_cpl_video ' . $order
-        );
-        if (!$neighbor) {
-            return true; // déjà en bout de liste
-        }
-        Db::getInstance()->update('cpl_video', array('position' => (int) $neighbor['position']), 'id_cpl_video = ' . (int) $video->id);
-        Db::getInstance()->update('cpl_video', array('position' => (int) $video->position), 'id_cpl_video = ' . (int) $neighbor['id_cpl_video']);
-
-        return true;
-    }
-
-    public static function deleteByProduct($idProduct)
-    {
         $rows = Db::getInstance()->executeS(
-            'SELECT id_cpl_video FROM `' . _DB_PREFIX_ . 'cpl_video` WHERE id_product = ' . (int) $idProduct
+            'SELECT id_cpl_video FROM `' . _DB_PREFIX_ . 'cpl_video`
+             WHERE id_product = ' . (int) $idProduct . ' AND id_shop IN (' . implode(',', $idShops) . ')'
         );
         if (is_array($rows)) {
             foreach ($rows as $row) {
@@ -137,7 +121,7 @@ class CplVideo extends ObjectModel
      */
     public function delete()
     {
-        if ($this->thumb !== '') {
+        if ($this->thumb !== '' && $this->thumb !== null) {
             @unlink(self::thumbsDir() . basename($this->thumb));
         }
         if ($this->type === self::TYPE_FILE && $this->video_ref !== '') {

@@ -17,6 +17,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once dirname(__FILE__) . '/classes/CplVideo.php';
+require_once dirname(__FILE__) . '/classes/CoolPlayApi.php';
 
 class CoolPlay extends Module
 {
@@ -26,7 +27,7 @@ class CoolPlay extends Module
     {
         $this->name = 'coolplay';
         $this->tab = 'front_office_features';
-        $this->version = '1.0.4';
+        $this->version = '1.1.0';
         $this->author = 'ZM40';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -378,7 +379,7 @@ class CoolPlay extends Module
         $idProduct = isset($params['id_product']) ? (int) $params['id_product'] : 0;
         if ($idProduct > 0) {
             try {
-                CplVideo::deleteByProduct($idProduct);
+                CplVideo::deleteByProduct($idProduct, Shop::getContextListShopID());
             } catch (Exception $e) {
                 // best effort
             }

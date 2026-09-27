@@ -17,6 +17,7 @@ if (!defined('_PS_VERSION_')) {
 }
 
 require_once _PS_MODULE_DIR_ . 'coolplay/classes/CplVideo.php';
+require_once _PS_MODULE_DIR_ . 'coolplay/classes/CoolPlayApi.php';
 
 /**
  * Contrôleur AJAX de gestion des vidéos, appelé depuis l'onglet CoolPlay de
@@ -67,46 +68,31 @@ class AdminCoolPlayController extends ModuleAdminController
         if ($idProduct <= 0) {
             $this->jsonOut(array('ok' => false, 'error' => $this->l('Produit inconnu.')));
         }
+        $idShop = (int) $this->context->shop->id;
+
+        // Le back-office saisit un seul titre : il vaut pour toutes les langues.
+        $title = trim((string) Tools::getValue('title'));
+        $titles = array();
+        foreach (Language::getLanguages(false) as $lang) {
+            $titles[(int) $lang['id_lang']] = $title;
+        }
 
         $mode = (string) Tools::getValue('mode');
-        $title = trim((string) Tools::getValue('title'));
-
-        $video = new CplVideo();
-        $video->id_product = $idProduct;
-        $video->id_shop = (int) $this->context->shop->id;
-        $video->position = CplVideo::maxPosition($idProduct, (int) $this->context->shop->id) + 1;
-        $video->active = 1;
-
-        if ($mode === 'youtube') {
-            $ytId = CplVideo::parseYoutubeId(Tools::getValue('url'));
-            if ($ytId === '') {
-                $this->jsonOut(array('ok' => false, 'error' => $this->l('URL YouTube non reconnue. Formats acceptés : youtube.com/watch?v=..., youtu.be/..., shorts, embed ou ID brut.')));
-            }
-            $video->type = CplVideo::TYPE_YOUTUBE;
-            $video->video_ref = $ytId;
-            // Miniature rapatriée en local : zéro requête tierce sur la fiche
-            // produit avant le clic. Fail-soft si YouTube est injoignable.
-            $video->thumb = CplVideo::fetchYoutubeThumb($ytId);
-        } elseif ($mode === 'file') {
-            $file = $this->saveUpload('cpl_file', array('mp4', 'webm'), 'vid_' . $idProduct, CplVideo::uploadsDir());
-            if ($file === '') {
-                $this->jsonOut(array('ok' => false, 'error' => $this->l('Fichier vidéo manquant ou refusé (MP4 ou WebM uniquement, vérifiez aussi la limite d\'envoi de votre serveur).')));
-            }
-            $video->type = CplVideo::TYPE_FILE;
-            $video->video_ref = $file;
-            $video->thumb = $this->saveUpload('cpl_poster', array('jpg', 'jpeg', 'png', 'webp'), 'poster_' . $idProduct, CplVideo::thumbsDir());
-        } else {
-            $this->jsonOut(array('ok' => false, 'error' => $this->l('Action invalide.')));
-        }
-
-        foreach (Language::getLanguages(false) as $lang) {
-            $video->title[(int) $lang['id_lang']] = $title;
-        }
-
         try {
-            $video->add();
-        } catch (Exception $e) {
-            $this->jsonOut(array('ok' => false, 'error' => $this->l('Enregistrement impossible : ') . $e->getMessage()));
+            if ($mode === 'youtube') {
+                CoolPlayApi::addYoutube($idProduct, $idShop, Tools::getValue('url'), $titles);
+            } elseif ($mode === 'file') {
+                $video = $this->uploadedFile('cpl_file');
+                if ($video === null) {
+                    $this->jsonOut(array('ok' => false, 'error' => $this->l('Fichier vidéo manquant ou refusé (MP4 ou WebM uniquement, vérifiez aussi la limite d\'envoi de votre serveur).')));
+                }
+                $poster = $this->uploadedFile('cpl_poster');
+                CoolPlayApi::addFile($idProduct, $idShop, $video['tmp_name'], $video['name'], $titles, $poster ? $poster['tmp_name'] : null);
+            } else {
+                $this->jsonOut(array('ok' => false, 'error' => $this->l('Action invalide.')));
+            }
+        } catch (CoolPlayApiException $e) {
+            $this->jsonOut(array('ok' => false, 'error' => $this->errorMessage($e->getMessage())));
         }
 
         $this->jsonOut(array('ok' => true, 'rows' => $this->renderRows($idProduct)));
@@ -115,23 +101,37 @@ class AdminCoolPlayController extends ModuleAdminController
     public function ajaxProcessDeleteVideo()
     {
         $video = $this->loadVideo();
-        $idProduct = (int) $video->id_product;
-        $video->delete();
-        $this->jsonOut(array('ok' => true, 'rows' => $this->renderRows($idProduct)));
+        $this->callApi(function () use ($video) {
+            CoolPlayApi::delete((int) $video->id, (int) $video->id_product, (int) $video->id_shop);
+        });
+        $this->jsonOut(array('ok' => true, 'rows' => $this->renderRows((int) $video->id_product)));
     }
 
     public function ajaxProcessToggleVideo()
     {
         $video = $this->loadVideo();
-        $video->active = $video->active ? 0 : 1;
-        $video->update();
+        $this->callApi(function () use ($video) {
+            CoolPlayApi::update((int) $video->id, (int) $video->id_product, (int) $video->id_shop, array('active' => !$video->active));
+        });
         $this->jsonOut(array('ok' => true, 'rows' => $this->renderRows((int) $video->id_product)));
     }
 
+    /**
+     * Monte ou descend d'un cran : échange avec la voisine, puis ordre absolu.
+     */
     public function ajaxProcessMoveVideo()
     {
         $video = $this->loadVideo();
-        CplVideo::move((int) $video->id, Tools::getValue('dir') === 'up');
+        $ids = array_column(CoolPlayApi::listForProduct((int) $video->id_product, (int) $video->id_shop), 'id');
+        $i = array_search((int) $video->id, $ids, true);
+        $j = Tools::getValue('dir') === 'up' ? $i - 1 : $i + 1;
+        if ($i !== false && isset($ids[$j])) {
+            $ids[$i] = $ids[$j];
+            $ids[$j] = (int) $video->id;
+            $this->callApi(function () use ($video, $ids) {
+                CoolPlayApi::reorder((int) $video->id_product, (int) $video->id_shop, $ids);
+            });
+        }
         $this->jsonOut(array('ok' => true, 'rows' => $this->renderRows((int) $video->id_product)));
     }
 
@@ -139,10 +139,13 @@ class AdminCoolPlayController extends ModuleAdminController
     {
         $video = $this->loadVideo();
         $title = trim((string) Tools::getValue('title'));
+        $titles = array();
         foreach (Language::getLanguages(false) as $lang) {
-            $video->title[(int) $lang['id_lang']] = $title;
+            $titles[(int) $lang['id_lang']] = $title;
         }
-        $video->update();
+        $this->callApi(function () use ($video, $titles) {
+            CoolPlayApi::update((int) $video->id, (int) $video->id_product, (int) $video->id_shop, array('titles' => $titles));
+        });
         $this->jsonOut(array('ok' => true));
     }
 
@@ -151,40 +154,56 @@ class AdminCoolPlayController extends ModuleAdminController
      * -------------------------------------------------------------------- */
 
     /**
-     * @return CplVideo chargé, ou sortie JSON en erreur
+     * Vidéo de la requête, si elle appartient au produit envoyé et à la
+     * boutique courante ; sinon sortie JSON en erreur.
+     *
+     * @return CplVideo
      */
     private function loadVideo()
     {
-        $video = new CplVideo((int) Tools::getValue('id_video'));
-        if (!Validate::isLoadedObject($video)) {
+        try {
+            return CoolPlayApi::load((int) Tools::getValue('id_video'), (int) Tools::getValue('id_product'), (int) $this->context->shop->id);
+        } catch (CoolPlayApiException $e) {
             $this->jsonOut(array('ok' => false, 'error' => $this->l('Vidéo introuvable.')));
         }
+    }
 
-        return $video;
+    private function callApi($fn)
+    {
+        try {
+            $fn();
+        } catch (CoolPlayApiException $e) {
+            $this->jsonOut(array('ok' => false, 'error' => $this->errorMessage($e->getMessage())));
+        }
     }
 
     /**
-     * Déplace un upload validé (extension) vers $dir avec un nom sûr.
+     * Fichier réellement reçu par envoi HTTP, ou null.
      *
-     * @return string nom de fichier, ou ''
+     * @return array|null ['tmp_name', 'name']
      */
-    private function saveUpload($field, array $allowedExt, $prefix, $dir)
+    private function uploadedFile($field)
     {
         if (empty($_FILES[$field]['tmp_name']) || !empty($_FILES[$field]['error'])
             || !is_uploaded_file($_FILES[$field]['tmp_name'])) {
-            return '';
-        }
-        $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowedExt, true)) {
-            return '';
-        }
-        CplVideo::ensureDirs();
-        $name = $prefix . '_' . Tools::passwdGen(8) . '.' . $ext;
-        if (!@move_uploaded_file($_FILES[$field]['tmp_name'], $dir . $name)) {
-            return '';
+            return null;
         }
 
-        return $name;
+        return array('tmp_name' => $_FILES[$field]['tmp_name'], 'name' => (string) $_FILES[$field]['name']);
+    }
+
+    private function errorMessage($code)
+    {
+        $messages = array(
+            'not_found'      => $this->l('Vidéo introuvable.'),
+            'bad_youtube'    => $this->l('URL YouTube non reconnue. Formats acceptés : youtube.com/watch?v=..., youtu.be/..., shorts, embed ou ID brut.'),
+            'bad_file_type'  => $this->l('Fichier refusé : vidéo MP4 ou WebM, image d\'aperçu JPG, PNG ou WebP.'),
+            'file_too_large' => $this->l('Fichier trop lourd : 100 Mo maximum pour une vidéo, 5 Mo pour une image d\'aperçu.'),
+            'bad_order'      => $this->l('Ordre invalide.'),
+            'save_failed'    => $this->l('Enregistrement impossible.'),
+        );
+
+        return isset($messages[$code]) ? $messages[$code] : $code;
     }
 
     private function renderRows($idProduct)
