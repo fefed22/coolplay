@@ -255,8 +255,101 @@ class CoolPlayApi
     }
 
     /* ----------------------------------------------------------------------
+     * Maintenance
+     * -------------------------------------------------------------------- */
+
+    /**
+     * Nombre de vidéos YouTube sans miniature locale : thumb vide en base
+     * (import direct en base, migration) ou fichier absent du serveur.
+     *
+     * @return int
+     */
+    public static function countMissingYoutubeThumbs()
+    {
+        $rows = Db::getInstance()->executeS(
+            'SELECT thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\''
+        );
+
+        $missing = 0;
+        foreach (is_array($rows) ? $rows : array() as $row) {
+            if (!self::hasLocalThumb($row)) {
+                $missing++;
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Reconstruit les miniatures YouTube manquantes : le même rapatriement
+     * qu'à l'ajout (CplVideo::fetchYoutubeThumb), appliqué à toutes les
+     * vidéos YouTube de la base, puis mise à jour de la référence en base.
+     * Les miniatures déjà présentes sur le serveur ne sont pas retéléchargées.
+     *
+     * Le traitement s'arrête après $timeBudget secondes de travail pour
+     * respecter les limites d'exécution PHP : les vidéos restantes sont
+     * comptées dans 'remaining', un nouvel appel les traite.
+     *
+     * @param int $timeBudget budget en secondes (0 : illimité)
+     *
+     * @return array total, rebuilt, skipped, failed (références), remaining
+     */
+    public static function rebuildYoutubeThumbs($timeBudget = 20)
+    {
+        @set_time_limit(0);
+
+        $rows = Db::getInstance()->executeS(
+            'SELECT id_cpl_video, video_ref, thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\'
+             ORDER BY id_cpl_video ASC'
+        );
+
+        $stats = array('total' => 0, 'rebuilt' => 0, 'skipped' => 0, 'failed' => array(), 'remaining' => 0);
+        if (!is_array($rows)) {
+            return $stats;
+        }
+        $stats['total'] = count($rows);
+
+        $start = time();
+        foreach ($rows as $row) {
+            if (self::hasLocalThumb($row)) {
+                $stats['skipped']++;
+                continue;
+            }
+            if ($timeBudget > 0 && (time() - $start) >= $timeBudget) {
+                $stats['remaining']++;
+                continue;
+            }
+
+            $thumb = CplVideo::fetchYoutubeThumb((string) $row['video_ref']);
+            if ($thumb === ''
+                || !Db::getInstance()->update('cpl_video', array('thumb' => $thumb), 'id_cpl_video = ' . (int) $row['id_cpl_video'])) {
+                if ($thumb !== '') {
+                    @unlink(CplVideo::thumbsDir() . $thumb);
+                }
+                $stats['failed'][] = (string) $row['video_ref'];
+                continue;
+            }
+            $stats['rebuilt']++;
+        }
+
+        return $stats;
+    }
+
+    /* ----------------------------------------------------------------------
      * Internes
      * -------------------------------------------------------------------- */
+
+    /**
+     * La ligne référence une miniature ET le fichier existe sur le serveur ?
+     */
+    protected static function hasLocalThumb(array $row)
+    {
+        $thumb = isset($row['thumb']) ? (string) $row['thumb'] : '';
+
+        return $thumb !== '' && is_file(CplVideo::thumbsDir() . basename($thumb));
+    }
 
     /**
      * @return int id de la vidéo créée

@@ -27,7 +27,7 @@ class CoolPlay extends Module
     {
         $this->name = 'coolplay';
         $this->tab = 'front_office_features';
-        $this->version = '1.1.0';
+        $this->version = '1.2.0';
         $this->author = 'ZM40';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -398,6 +398,9 @@ class CoolPlay extends Module
         if (Tools::isSubmit('submitCplConfig')) {
             $output .= $this->postProcessConfig();
         }
+        if (Tools::isSubmit('submitCplRebuildThumbs')) {
+            $output .= $this->processRebuildThumbs();
+        }
 
         $this->context->controller->addCSS($this->_path . 'views/css/zm40-common.css');
 
@@ -407,6 +410,9 @@ class CoolPlay extends Module
             'cpl_products'       => $this->getProductsWithVideos(),
             'cpl_count_videos'   => (int) Db::getInstance()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'cpl_video`'),
             'cpl_count_products' => (int) Db::getInstance()->getValue('SELECT COUNT(DISTINCT id_product) FROM `' . _DB_PREFIX_ . 'cpl_video`'),
+            'cpl_thumbs_missing' => CoolPlayApi::countMissingYoutubeThumbs(),
+            'cpl_rebuild_action' => AdminController::$currentIndex . '&configure=' . $this->name,
+            'cpl_rebuild_token'  => Tools::getAdminTokenLite('AdminModules'),
             'zm40_ah_name'       => $this->displayName,
             'zm40_ah_sub'        => $this->l('Vidéos produits sans impact sur la vitesse'),
             'zm40_ah_version'    => $this->version,
@@ -488,6 +494,48 @@ class CoolPlay extends Module
         Zm40CommonCpl::clearFeedCache();
 
         return $this->displayConfirmation($this->l('Paramètres enregistrés.'));
+    }
+
+    /**
+     * Bouton de maintenance « Reconstruire les miniatures YouTube » :
+     * rapport du traitement ligne par ligne (voir CoolPlayApi::rebuildYoutubeThumbs).
+     */
+    private function processRebuildThumbs()
+    {
+        $stats = CoolPlayApi::rebuildYoutubeThumbs();
+
+        $done = array();
+        if ($stats['rebuilt'] > 0) {
+            $done[] = sprintf($this->l('%d miniature(s) YouTube reconstruite(s).'), $stats['rebuilt']);
+        }
+        if ($stats['skipped'] > 0) {
+            $done[] = sprintf($this->l('%d déjà présente(s) sur le serveur.'), $stats['skipped']);
+        }
+
+        $warn = array();
+        if (!empty($stats['failed'])) {
+            // Liste dédupliquée et tronquée : les vidéos en échec restent sans
+            // miniature, le front replie sur i.ytimg.com.
+            $warn[] = sprintf(
+                $this->l('%d échec(s) (vidéo supprimée de YouTube ou serveur injoignable) : %s'),
+                count($stats['failed']),
+                implode(' ', array_slice(array_unique($stats['failed']), 0, 10))
+            );
+        }
+        if ($stats['remaining'] > 0) {
+            $warn[] = sprintf($this->l('%d vidéo(s) restante(s) pour respecter la limite de temps du serveur : cliquez à nouveau sur le bouton pour continuer.'), $stats['remaining']);
+        }
+
+        if (empty($done) && empty($warn)) {
+            return $this->displayConfirmation($this->l('Aucune vidéo YouTube à traiter.'));
+        }
+
+        $output = $done ? $this->displayConfirmation(implode(' ', $done)) : '';
+        if ($warn) {
+            $output .= $this->displayWarning(implode('<br>', $warn));
+        }
+
+        return $output;
     }
 
     private function renderConfigForm()

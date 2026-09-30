@@ -4,6 +4,12 @@ Toutes les modifications notables de ce module sont documentées ici.
 
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et le module suit le [Versionnement sémantique](https://semver.org/lang/fr/).
 
+## [1.2.0] - 2026-09-30
+
+### Ajouté
+
+- **Reconstruction des miniatures YouTube depuis la configuration du module.** Après une migration ou un import direct en base, les vidéos YouTube ajoutées sans passer par la fiche produit n'ont pas de miniature locale : la fiche produit retombe sur i.ytimg.com, une requête tierce avant le clic. Une section de maintenance en bas de la page de configuration affiche le nombre de miniatures manquantes et rejoue le rapatriement fait à l'ajout (qualité maximale d'abord, repli inclus) pour toutes les vidéos YouTube de la base, puis met à jour la référence de chaque ligne. Confirmation demandée avant lancement et rapport du résultat : reconstruites, déjà présentes, échecs (vidéo supprimée de YouTube ou serveur injoignable). Les miniatures déjà présentes ne sont pas retéléchargées ; le traitement s'interrompt proprement à l'approche de la limite d'exécution PHP et un nouveau clic reprend là où il s'est arrêté.
+
 ## [1.1.0] - 2026-09-27
 
 ### Ajouté

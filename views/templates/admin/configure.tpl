@@ -101,6 +101,25 @@
     </ul>
 </div>
 
+{* Maintenance : reconstruction des miniatures YouTube après un import direct en base *}
+<div class="panel">
+    <div class="panel-heading"><i class="icon-refresh"></i> {l s='Maintenance des miniatures YouTube' mod='coolplay'}</div>
+    <p>{l s='Après une migration ou un import direct en base, les vidéos YouTube ajoutées sans passer par la fiche produit n\'ont pas de miniature locale : la fiche produit retombe alors sur i.ytimg.com, une requête tierce avant le clic. Le bouton rejoue le rapatriement fait à l\'ajout (qualité maximale d\'abord, repli inclus) et met la base à jour. Les miniatures déjà présentes ne sont pas retéléchargées.' mod='coolplay'}</p>
+    <p style="margin-bottom:8px">
+        {if $cpl_thumbs_missing > 0}
+            <span class="label label-warning">{$cpl_thumbs_missing|intval} {l s='miniature(s) manquante(s) sur le serveur' mod='coolplay'}</span>
+        {else}
+            <span class="label label-success"><i class="icon-ok"></i> {l s='Toutes les miniatures sont présentes' mod='coolplay'}</span>
+        {/if}
+    </p>
+    <form method="post" action="{$cpl_rebuild_action|escape:'html':'UTF-8'}">
+        <input type="hidden" name="token" value="{$cpl_rebuild_token|escape:'html':'UTF-8'}">
+        <button type="submit" name="submitCplRebuildThumbs" value="1" class="btn btn-default" onclick="return confirm('{l s='Reconstruire les miniatures YouTube manquantes ? Chaque vidéo absente du serveur sera téléchargée depuis YouTube : cela peut prendre quelques instants.' mod='coolplay'}');">
+            <i class="icon-refresh"></i> {l s='Reconstruire les miniatures YouTube' mod='coolplay'}
+        </button>
+    </form>
+</div>
+
 {* Panel « libre & open source » + prestations — toujours en bas, visible quel que soit l'onglet actif *}
 {include file="./_partials/zm40_panel.tpl"}
 
