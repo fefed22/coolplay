@@ -114,7 +114,7 @@
     </p>
     <form method="post" action="{$cpl_rebuild_action|escape:'html':'UTF-8'}">
         <input type="hidden" name="token" value="{$cpl_rebuild_token|escape:'html':'UTF-8'}">
-        <button type="submit" name="submitCplRebuildThumbs" value="1" class="btn btn-default" onclick="return confirm('{l s='Reconstruire les miniatures YouTube manquantes ? Chaque vidéo absente du serveur sera téléchargée depuis YouTube : cela peut prendre quelques instants.' mod='coolplay'}');">
+        <button type="submit" name="submitCplRebuildThumbs" value="1" class="btn btn-default" data-confirm="{l s='Reconstruire les miniatures YouTube manquantes ? Chaque vidéo absente du serveur sera téléchargée depuis YouTube : cela peut prendre quelques instants.' mod='coolplay'}" onclick="return confirm(this.getAttribute('data-confirm'));">
             <i class="icon-refresh"></i> {l s='Reconstruire les miniatures YouTube' mod='coolplay'}
         </button>
     </form>

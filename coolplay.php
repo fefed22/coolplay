@@ -515,11 +515,12 @@ class CoolPlay extends Module
         $warn = array();
         if (!empty($stats['failed'])) {
             // Liste dédupliquée et tronquée : les vidéos en échec restent sans
-            // miniature, le front replie sur i.ytimg.com.
+            // miniature, le front replie sur i.ytimg.com. Références échappées :
+            // elles viennent de la base telles qu'importées, sans contrôle de format.
             $warn[] = sprintf(
                 $this->l('%d échec(s) (vidéo supprimée de YouTube ou serveur injoignable) : %s'),
                 count($stats['failed']),
-                implode(' ', array_slice(array_unique($stats['failed']), 0, 10))
+                implode(' ', array_map('htmlspecialchars', array_slice(array_unique($stats['failed']), 0, 10)))
             );
         }
         if ($stats['remaining'] > 0) {
