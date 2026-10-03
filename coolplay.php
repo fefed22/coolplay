@@ -505,13 +505,16 @@ class CoolPlay extends Module
     private function processRebuildThumbs()
     {
         $stats = CoolPlayApi::rebuildYoutubeThumbs();
+        $n = function ($count, $one, $many) {
+            return sprintf($count > 1 ? $many : $one, $count);
+        };
 
         $done = array();
         if ($stats['rebuilt'] > 0) {
-            $done[] = sprintf($this->l('%d miniature(s) YouTube reconstruite(s).'), $stats['rebuilt']);
+            $done[] = $n($stats['rebuilt'], $this->l('%d miniature YouTube reconstruite.'), $this->l('%d miniatures YouTube reconstruites.'));
         }
         if ($stats['skipped'] > 0) {
-            $done[] = sprintf($this->l('%d déjà présente(s) sur le serveur.'), $stats['skipped']);
+            $done[] = $n($stats['skipped'], $this->l('%d miniature déjà présente sur le serveur.'), $this->l('%d miniatures déjà présentes sur le serveur.'));
         }
 
         // Références échappées, dédupliquées et tronquées : elles viennent de la
@@ -521,23 +524,27 @@ class CoolPlay extends Module
         };
         $warn = array();
         if (!empty($stats['unavailable'])) {
-            $warn[] = sprintf(
-                $this->l('%d vidéo(s) introuvable(s) sur YouTube (supprimée ou privée) : désactivée(s), elles n\'apparaissent plus en boutique. Repérez-les dans l\'onglet Produits avec vidéos pour les remplacer : %s'),
+            $warn[] = $n(
                 count($stats['unavailable']),
-                $refs($stats['unavailable'])
-            );
+                $this->l('%d vidéo introuvable sur YouTube (supprimée ou privée) : désactivée, elle n\'apparaît plus en boutique. Repérez-la dans l\'onglet Produits avec vidéos pour la remplacer :'),
+                $this->l('%d vidéos introuvables sur YouTube (supprimées ou privées) : désactivées, elles n\'apparaissent plus en boutique. Repérez-les dans l\'onglet Produits avec vidéos pour les remplacer :')
+            ) . ' ' . $refs($stats['unavailable']);
         }
         if (!empty($stats['failed'])) {
             // YouTube n'a pas répondu : rien n'est tranché, le front replie sur
             // i.ytimg.com et un prochain clic retentera.
-            $warn[] = sprintf(
-                $this->l('%d vidéo(s) sans réponse de YouTube (serveur injoignable) : réessayez plus tard. %s'),
+            $warn[] = $n(
                 count($stats['failed']),
-                $refs($stats['failed'])
-            );
+                $this->l('%d vidéo sans réponse de YouTube (serveur injoignable) : réessayez plus tard.'),
+                $this->l('%d vidéos sans réponse de YouTube (serveur injoignable) : réessayez plus tard.')
+            ) . ' ' . $refs($stats['failed']);
         }
         if ($stats['remaining'] > 0) {
-            $warn[] = sprintf($this->l('%d vidéo(s) restante(s) pour respecter la limite de temps du serveur : cliquez à nouveau sur le bouton pour continuer.'), $stats['remaining']);
+            $warn[] = $n(
+                $stats['remaining'],
+                $this->l('%d vidéo restante pour respecter la limite de temps du serveur : cliquez à nouveau sur le bouton pour continuer.'),
+                $this->l('%d vidéos restantes pour respecter la limite de temps du serveur : cliquez à nouveau sur le bouton pour continuer.')
+            );
         }
 
         if (empty($done) && empty($warn)) {

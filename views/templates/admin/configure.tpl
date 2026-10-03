@@ -23,7 +23,7 @@
 <div class="alert alert-info">
     <i class="icon-film"></i>
     {if $cpl_count_videos > 0}
-        {$cpl_count_videos|intval} {l s='vidéo(s) sur' mod='coolplay'} {$cpl_count_products|intval} {l s='produit(s).' mod='coolplay'}
+        {$cpl_count_videos|intval} {if $cpl_count_videos > 1}{l s='vidéos sur' mod='coolplay'}{else}{l s='vidéo sur' mod='coolplay'}{/if} {$cpl_count_products|intval} {if $cpl_count_products > 1}{l s='produits.' mod='coolplay'}{else}{l s='produit.' mod='coolplay'}{/if}
     {/if}
     {l s='Les vidéos se gèrent directement sur chaque fiche produit, dans le bloc CoolPlay affiché sous la zone d\'images.' mod='coolplay'}
 </div>
@@ -50,7 +50,8 @@
                         <tr>
                             <th style="width:70px">{l s='ID' mod='coolplay'}</th>
                             <th>{l s='Produit' mod='coolplay'}</th>
-                            <th style="width:130px">{l s='Vidéos' mod='coolplay'}</th>
+                            <th style="width:90px">{l s='Vidéos' mod='coolplay'}</th>
+                            <th>{l s='État' mod='coolplay'}</th>
                             <th style="width:260px"></th>
                         </tr>
                     </thead>
@@ -59,13 +60,13 @@
                             <tr>
                                 <td>{$p.id_product|intval}</td>
                                 <td>{if $p.name}{$p.name|escape:'html':'UTF-8'}{else}<em>{l s='(produit introuvable dans cette boutique)' mod='coolplay'}</em>{/if}</td>
+                                <td>{$p.nb|intval}</td>
                                 <td>
-                                    {$p.nb|intval}
                                     {if $p.nb - $p.nb_active - $p.nb_unavailable > 0}
-                                        <span class="label label-warning">{($p.nb - $p.nb_active - $p.nb_unavailable)|intval} {l s='masquée(s)' mod='coolplay'}</span>
+                                        <span class="label label-warning">{($p.nb - $p.nb_active - $p.nb_unavailable)|intval} {if $p.nb - $p.nb_active - $p.nb_unavailable > 1}{l s='masquées' mod='coolplay'}{else}{l s='masquée' mod='coolplay'}{/if}</span>
                                     {/if}
                                     {if $p.nb_unavailable > 0}
-                                        <span class="label label-danger" title="{l s='Vidéo supprimée ou rendue privée sur YouTube : désactivée automatiquement, elle n\'apparaît plus en boutique. Remplacez-la ou supprimez-la depuis la fiche produit.' mod='coolplay'}">{$p.nb_unavailable|intval} {l s='introuvable(s) sur YouTube' mod='coolplay'}</span>
+                                        <span class="label label-danger" title="{l s='Vidéo supprimée ou rendue privée sur YouTube : désactivée automatiquement, elle n\'apparaît plus en boutique. Remplacez-la ou supprimez-la depuis la fiche produit.' mod='coolplay'}">{$p.nb_unavailable|intval} {if $p.nb_unavailable > 1}{l s='introuvables sur YouTube' mod='coolplay'}{else}{l s='introuvable sur YouTube' mod='coolplay'}{/if}</span>
                                     {/if}
                                     {if $p.nb_no_thumb > 0}
                                         <span class="label label-default" title="{l s='Miniature YouTube pas encore rapatriée sur le serveur : lancez la reconstruction en bas de page.' mod='coolplay'}">{$p.nb_no_thumb|intval} {l s='sans miniature' mod='coolplay'}</span>
@@ -113,7 +114,7 @@
     <p>{l s='Après une migration ou un import direct en base, les vidéos YouTube ajoutées sans passer par la fiche produit n\'ont pas de miniature locale : la fiche produit retombe alors sur i.ytimg.com, une requête tierce avant le clic. Le bouton rejoue le rapatriement fait à l\'ajout (qualité maximale d\'abord, repli inclus) et met la base à jour. Les miniatures déjà présentes ne sont pas retéléchargées. Une vidéo que YouTube ne trouve plus (supprimée ou privée) est désactivée et signalée dans l\'onglet Produits avec vidéos, au lieu d\'être retentée à chaque clic.' mod='coolplay'}</p>
     <p style="margin-bottom:8px">
         {if $cpl_thumbs_missing > 0}
-            <span class="label label-warning">{$cpl_thumbs_missing|intval} {l s='miniature(s) manquante(s) sur le serveur' mod='coolplay'}</span>
+            <span class="label label-warning">{$cpl_thumbs_missing|intval} {if $cpl_thumbs_missing > 1}{l s='miniatures manquantes sur le serveur' mod='coolplay'}{else}{l s='miniature manquante sur le serveur' mod='coolplay'}{/if}</span>
         {else}
             <span class="label label-success"><i class="icon-ok"></i> {l s='Toutes les miniatures sont présentes' mod='coolplay'}</span>
         {/if}
