@@ -282,6 +282,32 @@ class CoolPlayApi
     }
 
     /**
+     * Vidéos YouTube sans miniature locale, par produit, pour repérer dans la
+     * liste des produits celles que la reconstruction n'a pas pu rapatrier.
+     *
+     * @param int $idShop
+     *
+     * @return int[] id_product => nombre
+     */
+    public static function missingYoutubeThumbsByProduct($idShop)
+    {
+        $rows = Db::getInstance()->executeS(
+            'SELECT id_product, thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\' AND id_shop = ' . (int) $idShop
+        );
+
+        $missing = array();
+        foreach (is_array($rows) ? $rows : array() as $row) {
+            if (!self::hasLocalThumb($row)) {
+                $id = (int) $row['id_product'];
+                $missing[$id] = (isset($missing[$id]) ? $missing[$id] : 0) + 1;
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
      * Reconstruit les miniatures YouTube manquantes : le même rapatriement
      * qu'à l'ajout (CplVideo::fetchYoutubeThumb), appliqué à toutes les
      * vidéos YouTube de la base, puis mise à jour de la référence en base.

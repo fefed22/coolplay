@@ -64,6 +64,9 @@
                                     {if $p.nb_active < $p.nb}
                                         <span class="label label-warning">{($p.nb - $p.nb_active)|intval} {l s='masquée(s)' mod='coolplay'}</span>
                                     {/if}
+                                    {if $p.nb_no_thumb > 0}
+                                        <span class="label label-danger" title="{l s='Miniature YouTube absente du serveur : vidéo supprimée de YouTube ou pas encore reconstruite (voir la maintenance en bas de page).' mod='coolplay'}">{$p.nb_no_thumb|intval} {l s='sans miniature' mod='coolplay'}</span>
+                                    {/if}
                                 </td>
                                 <td class="text-right">
                                     {if $p.bo_link}

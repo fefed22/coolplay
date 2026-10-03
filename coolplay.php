@@ -446,8 +446,10 @@ class CoolPlay extends Module
             return array();
         }
 
+        $noThumb = CoolPlayApi::missingYoutubeThumbsByProduct($idShop);
         foreach ($rows as &$row) {
             $id = (int) $row['id_product'];
+            $row['nb_no_thumb'] = isset($noThumb[$id]) ? $noThumb[$id] : 0;
             // Lien d'édition produit : LinkCore mappe lui-même vers la bonne
             // route Symfony selon la version (1.7 / 8 / 9).
             try {
@@ -518,7 +520,7 @@ class CoolPlay extends Module
             // miniature, le front replie sur i.ytimg.com. Références échappées :
             // elles viennent de la base telles qu'importées, sans contrôle de format.
             $warn[] = sprintf(
-                $this->l('%d échec(s) (vidéo supprimée de YouTube ou serveur injoignable) : %s'),
+                $this->l('%d échec(s) (vidéo supprimée de YouTube ou serveur injoignable), signalés « sans miniature » dans l\'onglet Produits avec vidéos : %s'),
                 count($stats['failed']),
                 implode(' ', array_map('htmlspecialchars', array_slice(array_unique($stats['failed']), 0, 10)))
             );
