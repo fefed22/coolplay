@@ -27,7 +27,7 @@ class CoolPlay extends Module
     {
         $this->name = 'coolplay';
         $this->tab = 'front_office_features';
-        $this->version = '1.2.0';
+        $this->version = '1.1.1';
         $this->author = 'ZM40';
         $this->need_instance = 0;
         $this->bootstrap = true;
