@@ -179,6 +179,10 @@ class CoolPlayApi
         if (!$saved) {
             throw new CoolPlayApiException('save_failed');
         }
+        // Réactivée à la main : la vidéo redevient candidate à la reconstruction.
+        if (!empty($changes['active'])) {
+            Db::getInstance()->update('cpl_video', array('unavailable' => 0), 'id_cpl_video = ' . (int) $video->id);
+        }
 
         return array('videos' => self::listForProduct($idProduct, $idShop), 'warnings' => array());
     }
@@ -260,7 +264,8 @@ class CoolPlayApi
 
     /**
      * Nombre de vidéos YouTube sans miniature locale : thumb vide en base
-     * (import direct en base, migration) ou fichier absent du serveur.
+     * (import direct en base, migration) ou fichier absent du serveur. Les
+     * vidéos déjà déclarées introuvables sur YouTube ne comptent plus.
      *
      * @return int
      */
@@ -268,7 +273,7 @@ class CoolPlayApi
     {
         $rows = Db::getInstance()->executeS(
             'SELECT thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
-             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\''
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\' AND unavailable = 0'
         );
 
         $missing = 0;
@@ -293,7 +298,7 @@ class CoolPlayApi
     {
         $rows = Db::getInstance()->executeS(
             'SELECT id_product, thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
-             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\' AND id_shop = ' . (int) $idShop
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\' AND unavailable = 0 AND id_shop = ' . (int) $idShop
         );
 
         $missing = array();
@@ -313,13 +318,17 @@ class CoolPlayApi
      * vidéos YouTube de la base, puis mise à jour de la référence en base.
      * Les miniatures déjà présentes sur le serveur ne sont pas retéléchargées.
      *
+     * Une vidéo que YouTube déclare introuvable (404) est désactivée et marquée
+     * `unavailable` : elle disparaît de la boutique et n'est plus retentée.
+     * Une erreur réseau ne tranche rien : la vidéo reste en échec, à retenter.
+     *
      * Le traitement s'arrête après $timeBudget secondes de travail pour
      * respecter les limites d'exécution PHP : les vidéos restantes sont
      * comptées dans 'remaining', un nouvel appel les traite.
      *
      * @param int $timeBudget budget en secondes (0 : illimité)
      *
-     * @return array total, rebuilt, skipped, failed (références), remaining
+     * @return array total, rebuilt, skipped, unavailable et failed (références), remaining
      */
     public static function rebuildYoutubeThumbs($timeBudget = 20)
     {
@@ -327,11 +336,11 @@ class CoolPlayApi
 
         $rows = Db::getInstance()->executeS(
             'SELECT id_cpl_video, video_ref, thumb FROM `' . _DB_PREFIX_ . 'cpl_video`
-             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\'
+             WHERE type = \'' . CplVideo::TYPE_YOUTUBE . '\' AND unavailable = 0
              ORDER BY id_cpl_video ASC'
         );
 
-        $stats = array('total' => 0, 'rebuilt' => 0, 'skipped' => 0, 'failed' => array(), 'remaining' => 0);
+        $stats = array('total' => 0, 'rebuilt' => 0, 'skipped' => 0, 'unavailable' => array(), 'failed' => array(), 'remaining' => 0);
         if (!is_array($rows)) {
             return $stats;
         }
@@ -348,7 +357,12 @@ class CoolPlayApi
                 continue;
             }
 
-            $thumb = CplVideo::fetchYoutubeThumb((string) $row['video_ref']);
+            $thumb = CplVideo::fetchYoutubeThumb((string) $row['video_ref'], $gone);
+            if ($thumb === '' && $gone) {
+                Db::getInstance()->update('cpl_video', array('active' => 0, 'unavailable' => 1), 'id_cpl_video = ' . (int) $row['id_cpl_video']);
+                $stats['unavailable'][] = (string) $row['video_ref'];
+                continue;
+            }
             if ($thumb === ''
                 || !Db::getInstance()->update('cpl_video', array('thumb' => $thumb), 'id_cpl_video = ' . (int) $row['id_cpl_video'])) {
                 if ($thumb !== '') {

@@ -61,11 +61,14 @@
                                 <td>{if $p.name}{$p.name|escape:'html':'UTF-8'}{else}<em>{l s='(produit introuvable dans cette boutique)' mod='coolplay'}</em>{/if}</td>
                                 <td>
                                     {$p.nb|intval}
-                                    {if $p.nb_active < $p.nb}
-                                        <span class="label label-warning">{($p.nb - $p.nb_active)|intval} {l s='masquée(s)' mod='coolplay'}</span>
+                                    {if $p.nb - $p.nb_active - $p.nb_unavailable > 0}
+                                        <span class="label label-warning">{($p.nb - $p.nb_active - $p.nb_unavailable)|intval} {l s='masquée(s)' mod='coolplay'}</span>
+                                    {/if}
+                                    {if $p.nb_unavailable > 0}
+                                        <span class="label label-danger" title="{l s='Vidéo supprimée ou rendue privée sur YouTube : désactivée automatiquement, elle n\'apparaît plus en boutique. Remplacez-la ou supprimez-la depuis la fiche produit.' mod='coolplay'}">{$p.nb_unavailable|intval} {l s='introuvable(s) sur YouTube' mod='coolplay'}</span>
                                     {/if}
                                     {if $p.nb_no_thumb > 0}
-                                        <span class="label label-danger" title="{l s='Miniature YouTube absente du serveur : vidéo supprimée de YouTube ou pas encore reconstruite (voir la maintenance en bas de page).' mod='coolplay'}">{$p.nb_no_thumb|intval} {l s='sans miniature' mod='coolplay'}</span>
+                                        <span class="label label-default" title="{l s='Miniature YouTube pas encore rapatriée sur le serveur : lancez la reconstruction en bas de page.' mod='coolplay'}">{$p.nb_no_thumb|intval} {l s='sans miniature' mod='coolplay'}</span>
                                     {/if}
                                 </td>
                                 <td class="text-right">
@@ -107,7 +110,7 @@
 {* Maintenance : reconstruction des miniatures YouTube après un import direct en base *}
 <div class="panel">
     <div class="panel-heading"><i class="icon-refresh"></i> {l s='Maintenance des miniatures YouTube' mod='coolplay'}</div>
-    <p>{l s='Après une migration ou un import direct en base, les vidéos YouTube ajoutées sans passer par la fiche produit n\'ont pas de miniature locale : la fiche produit retombe alors sur i.ytimg.com, une requête tierce avant le clic. Le bouton rejoue le rapatriement fait à l\'ajout (qualité maximale d\'abord, repli inclus) et met la base à jour. Les miniatures déjà présentes ne sont pas retéléchargées.' mod='coolplay'}</p>
+    <p>{l s='Après une migration ou un import direct en base, les vidéos YouTube ajoutées sans passer par la fiche produit n\'ont pas de miniature locale : la fiche produit retombe alors sur i.ytimg.com, une requête tierce avant le clic. Le bouton rejoue le rapatriement fait à l\'ajout (qualité maximale d\'abord, repli inclus) et met la base à jour. Les miniatures déjà présentes ne sont pas retéléchargées. Une vidéo que YouTube ne trouve plus (supprimée ou privée) est désactivée et signalée dans l\'onglet Produits avec vidéos, au lieu d\'être retentée à chaque clic.' mod='coolplay'}</p>
     <p style="margin-bottom:8px">
         {if $cpl_thumbs_missing > 0}
             <span class="label label-warning">{$cpl_thumbs_missing|intval} {l s='miniature(s) manquante(s) sur le serveur' mod='coolplay'}</span>

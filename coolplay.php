@@ -434,7 +434,7 @@ class CoolPlay extends Module
         $idLang = (int) $this->context->language->id;
 
         $rows = Db::getInstance()->executeS(
-            'SELECT v.id_product, COUNT(*) AS nb, SUM(v.active) AS nb_active, pl.name
+            'SELECT v.id_product, COUNT(*) AS nb, SUM(v.active) AS nb_active, SUM(v.unavailable) AS nb_unavailable, pl.name
              FROM `' . _DB_PREFIX_ . 'cpl_video` v
              LEFT JOIN `' . _DB_PREFIX_ . 'product_lang` pl
                 ON (pl.id_product = v.id_product AND pl.id_lang = ' . $idLang . ' AND pl.id_shop = ' . $idShop . ')
@@ -514,15 +514,26 @@ class CoolPlay extends Module
             $done[] = sprintf($this->l('%d déjà présente(s) sur le serveur.'), $stats['skipped']);
         }
 
+        // Références échappées, dédupliquées et tronquées : elles viennent de la
+        // base telles qu'importées, sans contrôle de format.
+        $refs = function (array $list) {
+            return implode(' ', array_map('htmlspecialchars', array_slice(array_unique($list), 0, 10)));
+        };
         $warn = array();
-        if (!empty($stats['failed'])) {
-            // Liste dédupliquée et tronquée : les vidéos en échec restent sans
-            // miniature, le front replie sur i.ytimg.com. Références échappées :
-            // elles viennent de la base telles qu'importées, sans contrôle de format.
+        if (!empty($stats['unavailable'])) {
             $warn[] = sprintf(
-                $this->l('%d échec(s) (vidéo supprimée de YouTube ou serveur injoignable), signalés « sans miniature » dans l\'onglet Produits avec vidéos : %s'),
+                $this->l('%d vidéo(s) introuvable(s) sur YouTube (supprimée ou privée) : désactivée(s), elles n\'apparaissent plus en boutique. Repérez-les dans l\'onglet Produits avec vidéos pour les remplacer : %s'),
+                count($stats['unavailable']),
+                $refs($stats['unavailable'])
+            );
+        }
+        if (!empty($stats['failed'])) {
+            // YouTube n'a pas répondu : rien n'est tranché, le front replie sur
+            // i.ytimg.com et un prochain clic retentera.
+            $warn[] = sprintf(
+                $this->l('%d vidéo(s) sans réponse de YouTube (serveur injoignable) : réessayez plus tard. %s'),
                 count($stats['failed']),
-                implode(' ', array_map('htmlspecialchars', array_slice(array_unique($stats['failed']), 0, 10)))
+                $refs($stats['failed'])
             );
         }
         if ($stats['remaining'] > 0) {
